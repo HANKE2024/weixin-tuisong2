@@ -1,23 +1,39 @@
+# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
 name: '微信定时推送任务'
+
 on:
+  workflow_dispatch:
   schedule:
-    - cron: '30 3 * * *'
-permissions:
-  contents: read
+    # 每天国际时间 23:30 运行, 即北京时间 7:30 运行
+    - cron: '30 23 * * *'
+    
 jobs:
   build:
+
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [16.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+
     steps:
+    # 添加定时任务指定运行分支 默认为master
     - uses: actions/checkout@v3
-    - name: '指定python环境'
-      uses: actions/setup-python@v3
       with:
-        python-version: "3.10"
-    - name: '安装python依赖'
-      run: |
-        python -m pip install --upgrade pip
-        pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-        pip install -r requirements.txt
-    - name: '发送消息'
-      run: |
-        python ./main.py
+          ref: 'master'
+          
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    - run: npm ci
+    - run: npm run dev --if-present
+    env: 
+      APP_ID: ${{secrets.APP_ID}}
+      APP_SECRET: ${{secrets.APP_SECRET}}
+      USER_INFO: ${{secrets.USER_INFO}}
+
